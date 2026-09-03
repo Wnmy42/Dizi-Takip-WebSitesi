@@ -25,8 +25,8 @@ Kişisel dizi takip uygulaması. İzlediğin dizileri listele, bölüm bölüm i
 ### 1. Repoyu klonla
 
 ```bash
-git clone https://github.com/kullanici/bingetrack.git
-cd bingetrack
+git clone https://github.com/Wnmy42/Dizi-Takip-WebSitesi.git
+cd Dizi-Takip-WebSitesi
 npm install
 ```
 
@@ -47,7 +47,7 @@ cp .env.example .env.local
 
 ### 3. Veritabanını kur
 
-Supabase SQL Editor'da [`supabase-migrations.sql`](../supabase-migrations.sql) içeriğini çalıştır.
+Supabase SQL Editor'da [`supabase-migrations.sql`](./supabase-migrations.sql) içeriğini çalıştır.
 
 ### 4. Geliştirme sunucusunu başlat
 
