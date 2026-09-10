@@ -17,7 +17,9 @@ function getHeaders(): HeadersInit {
 }
 
 async function tmdbFetch<T>(path: string, revalidate = 3600): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}&language=tr-TR`, {
+  const separator = path.includes('?') ? '&' : '?';
+  const url = `${BASE_URL}${path}${separator}language=tr-TR`;
+  const res = await fetch(url, {
     headers: getHeaders(),
     next: { revalidate },
   });
@@ -45,7 +47,7 @@ export async function getShowDetails(id: number): Promise<TMDBShow> {
 }
 
 export async function getSeasonDetails(showId: number, seasonNumber: number): Promise<TMDBSeasonDetail> {
-  return tmdbFetch(`/tv/${showId}/season/${seasonNumber}?`);
+  return tmdbFetch(`/tv/${showId}/season/${seasonNumber}`);
 }
 
 export function getPosterUrl(path: string | null, size: 'w185' | 'w342' | 'w500' | 'w780' | 'original' = 'w342'): string {

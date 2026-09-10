@@ -1,6 +1,6 @@
 'use client';
 
-import { useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import {
   Select,
   SelectContent,
@@ -16,25 +16,33 @@ const STATUSES: ShowStatus[] = ['watching', 'plan_to_watch', 'completed', 'dropp
 
 export function StatusSelector({ showId, currentStatus }: { showId: string; currentStatus: ShowStatus }) {
   const [isPending, startTransition] = useTransition();
+  const [statusError, setStatusError] = useState<string | null>(null);
 
   return (
-    <Select
-      value={currentStatus}
-      disabled={isPending}
-      onValueChange={(v) => {
-        startTransition(async () => {
-          await updateShowStatus(showId, v as ShowStatus);
-        });
-      }}
-    >
-      <SelectTrigger className="h-7 text-xs w-36">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {STATUSES.map((s) => (
-          <SelectItem key={s} value={s} className="text-xs">{getStatusLabel(s)}</SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <div>
+      <Select
+        value={currentStatus}
+        disabled={isPending}
+        onValueChange={(v) => {
+          setStatusError(null);
+          startTransition(async () => {
+            const result = await updateShowStatus(showId, v as ShowStatus);
+            if (result.error) {
+              setStatusError(result.error);
+            }
+          });
+        }}
+      >
+        <SelectTrigger className="h-7 text-xs w-36">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {STATUSES.map((s) => (
+            <SelectItem key={s} value={s} className="text-xs">{getStatusLabel(s)}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {statusError && <p role="alert" aria-live="polite" className="text-xs text-destructive mt-1">{statusError}</p>}
+    </div>
   );
 }

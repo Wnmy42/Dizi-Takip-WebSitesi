@@ -66,11 +66,14 @@ export async function addShow(data: {
 
 export async function updateShowStatus(showId: string, status: ShowStatus) {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Giriş yapmalısınız' };
 
   const { error } = await supabase
     .from('user_shows')
     .update({ status })
-    .eq('id', showId);
+    .eq('id', showId)
+    .eq('user_id', user.id);
 
   if (error) return { error: error.message };
   revalidatePath('/library');
@@ -79,11 +82,14 @@ export async function updateShowStatus(showId: string, status: ShowStatus) {
 
 export async function removeShow(showId: string) {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Giriş yapmalısınız' };
 
   const { error } = await supabase
     .from('user_shows')
     .delete()
-    .eq('id', showId);
+    .eq('id', showId)
+    .eq('user_id', user.id);
 
   if (error) return { error: error.message };
   revalidatePath('/library');
@@ -93,30 +99,47 @@ export async function removeShow(showId: string) {
 // EPISODE ACTIONS
 export async function toggleEpisode(data: {
   userShowId: string;
+  tmdbShowId: number;
   seasonNumber: number;
   episodeNumber: number;
   isWatched: boolean;
 }) {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Giriş yapmalısınız' };
+
+  // Sahiplik doğrula
+  const { data: ownerCheck } = await supabase
+    .from('user_shows')
+    .select('id')
+    .eq('id', data.userShowId)
+    .eq('user_id', user.id)
+    .single();
+
+  if (!ownerCheck) return { error: 'Bu dizi sizin kütüphanenizde değil' };
 
   if (data.isWatched) {
     // İzlenmemiş olarak işaretle (sil)
-    await supabase
+    const { error } = await supabase
       .from('user_episodes')
       .delete()
       .eq('user_show_id', data.userShowId)
       .eq('season_number', data.seasonNumber)
       .eq('episode_number', data.episodeNumber);
+
+    if (error) return { error: error.message };
   } else {
     // İzlenmiş olarak işaretle (ekle)
-    await supabase.from('user_episodes').insert({
+    const { error } = await supabase.from('user_episodes').insert({
       user_show_id: data.userShowId,
       season_number: data.seasonNumber,
       episode_number: data.episodeNumber,
     });
+
+    if (error) return { error: error.message };
   }
 
   revalidatePath('/library');
-  revalidatePath(`/shows/${data.userShowId}`);
+  revalidatePath(`/shows/${data.tmdbShowId}`);
   return { success: true };
 }

@@ -40,7 +40,7 @@ export default async function ShowDetailPage({ params }: ShowDetailPageProps) {
 
   // Kullanıcı kendi bölüm ilerlemesini çek
   let userShow: { id: string; total_episodes: number } | null = null;
-  let watchedEpisodeKeys = new Set<string>();
+  const watchedEpisodeKeys = new Set<string>();
 
   if (user) {
     const { data: userShowData } = await supabase
@@ -165,6 +165,7 @@ export default async function ShowDetailPage({ params }: ShowDetailPageProps) {
                             season={detail}
                             userShowId={userShow.id}
                             watchedEpisodeKeys={watchedEpisodeKeys}
+                            tmdbShowId={show.id}
                           />
                         ) : (
                           <div>

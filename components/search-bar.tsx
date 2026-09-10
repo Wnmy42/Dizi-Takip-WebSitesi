@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect, useRef } from 'react';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
@@ -10,19 +10,30 @@ export function SearchBar({ defaultValue = '' }: { defaultValue?: string }) {
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [value, setValue] = useState(defaultValue);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const newValue = e.target.value;
     setValue(newValue);
-    const params = new URLSearchParams(searchParams.toString());
-    if (newValue) {
-      params.set('q', newValue);
-    } else {
-      params.delete('q');
-    }
-    startTransition(() => {
-      router.replace(`/discover?${params.toString()}`);
-    });
+    if (timerRef.current) clearTimeout(timerRef.current);
+
+    timerRef.current = setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (newValue) {
+        params.set('q', newValue);
+      } else {
+        params.delete('q');
+      }
+      startTransition(() => {
+        router.replace(`/discover?${params.toString()}`);
+      });
+    }, 300);
   }
 
   return (

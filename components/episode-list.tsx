@@ -1,8 +1,7 @@
 'use client';
 
-import { useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { Check } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toggleEpisode } from '@/lib/supabase/actions';
 import type { TMDBSeasonDetail } from '@/lib/tmdb/types';
@@ -10,30 +9,38 @@ import type { TMDBSeasonDetail } from '@/lib/tmdb/types';
 interface EpisodeListProps {
   season: TMDBSeasonDetail;
   userShowId: string;
+  tmdbShowId: number;
   watchedEpisodeKeys: Set<string>; // "S{season}E{ep}" formatında
 }
 
 function EpisodeRow({
   episode,
   userShowId,
+  tmdbShowId,
   seasonNumber,
   isWatched,
 }: {
   episode: TMDBSeasonDetail['episodes'][number];
   userShowId: string;
+  tmdbShowId: number;
   seasonNumber: number;
   isWatched: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   function handleToggle() {
     startTransition(async () => {
-      await toggleEpisode({
+      const result = await toggleEpisode({
         userShowId,
+        tmdbShowId,
         seasonNumber,
         episodeNumber: episode.episode_number,
         isWatched,
       });
+      if (result?.error) {
+        setError(result.error);
+      }
     });
   }
 
@@ -53,6 +60,7 @@ function EpisodeRow({
       >
         {isWatched && <Check className="h-3 w-3" />}
       </button>
+      {error && <span role="alert" aria-live="polite" className="text-xs text-destructive">{error}</span>}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground shrink-0">
@@ -75,7 +83,7 @@ function EpisodeRow({
   );
 }
 
-export function EpisodeList({ season, userShowId, watchedEpisodeKeys }: EpisodeListProps) {
+export function EpisodeList({ season, userShowId, tmdbShowId, watchedEpisodeKeys }: EpisodeListProps) {
   const watchedCount = season.episodes.filter(
     (ep) => watchedEpisodeKeys.has(`S${season.season_number}E${ep.episode_number}`)
   ).length;
@@ -94,6 +102,7 @@ export function EpisodeList({ season, userShowId, watchedEpisodeKeys }: EpisodeL
             key={ep.id}
             episode={ep}
             userShowId={userShowId}
+            tmdbShowId={tmdbShowId}
             seasonNumber={season.season_number}
             isWatched={watchedEpisodeKeys.has(`S${season.season_number}E${ep.episode_number}`)}
           />

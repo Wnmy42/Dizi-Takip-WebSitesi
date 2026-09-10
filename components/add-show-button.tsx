@@ -34,8 +34,10 @@ export function AddShowButton({ show, isInLibrary = false }: AddShowButtonProps)
   const [status, setStatus] = useState<ShowStatus>('plan_to_watch');
   const [isPending, startTransition] = useTransition();
   const [done, setDone] = useState(isInLibrary);
+  const [addError, setAddError] = useState<string | null>(null);
 
   function handleAdd() {
+    setAddError(null);
     startTransition(async () => {
       const result = await addShow({
         tmdb_show_id: show.id,
@@ -44,7 +46,9 @@ export function AddShowButton({ show, isInLibrary = false }: AddShowButtonProps)
         total_episodes: show.number_of_episodes ?? 0,
         status,
       });
-      if (!result.error) {
+      if (result.error) {
+        setAddError(result.error);
+      } else {
         setDone(true);
         setOpen(false);
       }
@@ -86,6 +90,7 @@ export function AddShowButton({ show, isInLibrary = false }: AddShowButtonProps)
               </SelectContent>
             </Select>
           </div>
+          {addError && <p role="alert" className="text-sm text-destructive">{addError}</p>}
           <Button onClick={handleAdd} className="w-full" disabled={isPending}>
             {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Ekle'}
           </Button>

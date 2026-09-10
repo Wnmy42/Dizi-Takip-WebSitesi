@@ -84,7 +84,8 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
   }
 
   const { q, page: pageStr } = await searchParams;
-  const page = Number(pageStr ?? 1);
+  const rawPage = Number(pageStr ?? '1');
+  const page = Number.isFinite(rawPage) && rawPage > 0 ? Math.min(Math.floor(rawPage), 500) : 1;
 
   return (
     <main className="container mx-auto px-4 py-8">

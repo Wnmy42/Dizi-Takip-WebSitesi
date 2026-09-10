@@ -76,7 +76,7 @@ CREATE POLICY "user_episodes_delete" ON user_episodes
   );
 
 -- 8. İzleme istatistiği view’ı
-CREATE OR REPLACE VIEW user_shows_with_progress AS
+CREATE OR REPLACE VIEW user_shows_with_progress WITH (security_invoker = true) AS
 SELECT
   s.*,
   COUNT(e.id)::integer AS watched_episodes,
