@@ -37,20 +37,25 @@ export function AddShowButton({ show, isInLibrary = false }: AddShowButtonProps)
   const [addError, setAddError] = useState<string | null>(null);
 
   function handleAdd() {
+    if (isPending) return;
     setAddError(null);
     startTransition(async () => {
-      const result = await addShow({
-        tmdb_show_id: show.id,
-        title: show.name,
-        poster_path: show.poster_path,
-        total_episodes: show.number_of_episodes ?? 0,
-        status,
-      });
-      if (result.error) {
-        setAddError(result.error);
-      } else {
-        setDone(true);
-        setOpen(false);
+      try {
+        const result = await addShow({
+          tmdb_show_id: show.id,
+          title: show.name,
+          poster_path: show.poster_path,
+          total_episodes: show.number_of_episodes ?? 0,
+          status,
+        });
+        if (result.error) {
+          setAddError(result.error);
+        } else {
+          setDone(true);
+          setOpen(false);
+        }
+      } catch {
+        setAddError('Dizi listeye eklenemedi. Tekrar deneyin.');
       }
     });
   }

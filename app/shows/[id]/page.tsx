@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { Star, Calendar, Tv } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { AddShowButton } from '@/components/add-show-button';
+import { PersonalShowControls } from '@/components/personal-show-controls';
 import { ProgressBar } from '@/components/progress-bar';
 import { SeasonAccordion } from '@/components/season-accordion';
 import { createClient } from '@/lib/supabase/server';
@@ -28,13 +29,18 @@ export default async function ShowDetailPage({ params }: ShowDetailPageProps) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   // Kullanıcı kendi bölüm ilerlemesini çek
-  let userShow: { id: string; total_episodes: number } | null = null;
+  let userShow: {
+    id: string;
+    total_episodes: number;
+    rating: number | null;
+    is_favorite: boolean;
+  } | null = null;
   const watchedEpisodeKeys = new Set<string>();
 
   if (user) {
     const { data: userShowData } = await supabase
       .from('user_shows')
-      .select('id, total_episodes')
+      .select('id, total_episodes, rating, is_favorite')
       .eq('user_id', user.id)
       .eq('tmdb_show_id', showId)
       .single();
@@ -96,7 +102,7 @@ export default async function ShowDetailPage({ params }: ShowDetailPageProps) {
               )}
               <span className="flex items-center gap-1">
                 <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                {show.vote_average.toFixed(1)}
+                TMDB {show.vote_average.toFixed(1)}
               </span>
               {show.number_of_seasons && (
                 <span className="flex items-center gap-1">
@@ -126,8 +132,19 @@ export default async function ShowDetailPage({ params }: ShowDetailPageProps) {
             )}
 
             {user && (
-              <div className="mt-4">
+              <div className="mt-4 space-y-3">
                 <AddShowButton show={show} isInLibrary={isInLibrary} />
+                {userShow ? (
+                  <PersonalShowControls
+                    userShowId={userShow.id}
+                    initialIsFavorite={userShow.is_favorite}
+                    initialRating={userShow.rating}
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Favorilere eklemek ve kişisel puan vermek için önce diziyi listene ekle.
+                  </p>
+                )}
               </div>
             )}
 

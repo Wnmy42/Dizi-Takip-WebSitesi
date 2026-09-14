@@ -6,11 +6,11 @@ Kişisel dizi takip uygulaması. İzlediğin dizileri listele, bölüm bölüm i
 
 | Katman | Teknoloji |
 |---|---|
-| Frontend | Next.js 16 (App Router, TypeScript) |
+| Frontend | Next.js 16.3.5 (App Router, TypeScript) |
 | Stil | Tailwind CSS v4 + shadcn/ui |
 | Veri | TMDB API |
 | Backend / DB | Supabase (PostgreSQL + Auth) |
-| State | Server Actions + TanStack Query |
+| State | React durumları + Server Actions |
 
 ## Özellikler
 
@@ -19,6 +19,8 @@ Kişisel dizi takip uygulaması. İzlediğin dizileri listele, bölüm bölüm i
 - 📚 Kütüphane: İzliyorum / İzleyeceğim / Tamamlandı / Bıraktım
 - ✅ Bölüm takibi — tek tıkla izlendi işaretle
 - 📊 İlerleme yüzdesi ve devam et butonu
+- ❤️ Kütüphanedeki dizileri favorilere ekle/çıkar
+- ⭐ Dizi detayında ve kütüphanede kişisel 1–10 puan ver, değiştir veya temizle
 
 ## Kurulum
 
@@ -49,6 +51,8 @@ cp .env.example .env.local
 
 Supabase SQL Editor'da [`supabase-migrations.sql`](./supabase-migrations.sql) içeriğini çalıştır.
 
+Bu dosya **yeni veritabanı kurulumu** içindir. Mevcut veritabanında bootstrap dosyasını yeniden çalıştırma; uygulamanın yeni sürümünü kullanmadan önce yalnız [`20260913180000_add_user_show_favorites.sql`](./supabase/migrations/20260913180000_add_user_show_favorites.sql) migration'ını çalıştır. Migration tekrar uygulanabilir; mevcut puanları, bölüm ilerlemesini, RLS politikalarını ve görünüm izinlerini korur. Bu çalışma sırasında canlı Supabase'e uygulanmadı.
+
 ### 4. Geliştirme sunucusunu başlat
 
 ```bash
@@ -62,8 +66,7 @@ npm run dev
 ```
 app/
 ├── (auth)/          # Login / Register sayfaları
-├── (app)/           # Auth gerektiren sayfalar
-│   └── library/     # Kullanıcı kütüphanesi
+├── (app)/library/   # Auth gerektiren kullanıcı kütüphanesi
 ├── discover/        # Halka açık keşfet sayfası
 ├── shows/[id]/      # Dizi detay sayfası
 └── globals.css
@@ -85,10 +88,45 @@ lib/
 - [x] Supabase Auth + veritabanı şeması
 - [x] Kütüphane ve bölüm takibi
 - [x] İlerleme çubuğu ve UX polish
-- [ ] Favori diziler
-- [ ] Puan verme (1-10)
+- [x] CI, tip kontrolü ve Vitest test altyapısı
+- [x] Next.js 16 `proxy.ts` oturum yenileme yapısı
+- [x] Çevrimdışı/CI uyumlu sistem fontları
+- [x] Favori diziler
+- [x] Kişisel 1–10 puan verme, değiştirme ve temizleme
+- [ ] Kişisel dizi notları
+- [x] Sezon accordion ve talep üzerine bölüm yükleme
 - [ ] İstatistik sayfası
 - [ ] Vercel deploy
+
+## Güncel Durum
+
+Son doğrulama: **13 Eylül 2026**
+
+- Lint ve TypeScript kontrolü geçiyor.
+- 9 test dosyasında toplam 54 test geçiyor; accordion, favori/puan action ve arayüzleri, sayfa entegrasyonları ve PostgreSQL migration testleri dahil.
+- Üretim derlemesi geçiyor ve harici font indirmesine ihtiyaç duymuyor.
+- Kullanılmayan TanStack Query bağımlılığı kaldırıldı; mevcut veri akışı Server Components ve Server Actions kullanıyor.
+- Önceki bağımlılık doğrulamasında `npm audit` sonucu 0 güvenlik açığıydı; accordion çalışmasında audit yeniden çalıştırılmadı.
+- React 19.3, ESLint 10, TypeScript 7 ve Node tipleri 26 gibi büyük sürüm geçişleri uyumluluk çalışması gerektirdiği için otomatik uygulanmadı.
+- Supabase migration dosyasında `user_shows_with_progress` görünümü `security_invoker = true` olarak tanımlı.
+- Canlı Supabase projesinde migration ve iki kullanıcılı RLS testi ayrıca doğrulanmalı.
+
+## Favori ve kişisel puan akışı
+
+- Önce diziyi kütüphanene ekle. Detay ve kütüphane kartlarından favori durumunu değiştir; “Kişisel puanım” seçiminden 1–10 puan ver. “Puan yok” kayıtlı puanı temizler. TMDB puanı ayrı gösterilir.
+- Favori ve puan birbirinden bağımsız kaydedilir. İstek sürerken kontroller kilitlenir; hata halinde eski değer korunur ve aynı kontrolle yeniden denenebilir.
+- Server Actions girdileri çalışma zamanında doğrular ve güncellemeyi oturumdaki kullanıcıya sınırlar. Başarılı işlem `/library` ve veritabanından alınan TMDB kimliğinin detay yolunu yeniler.
+- Şemaya yalnız `is_favorite boolean NOT NULL DEFAULT false` eklendi; mevcut nullable `rating` ve 1–10 kısıtı korunur. İlerleme görünümü eski sütun sırasını ve `security_invoker=true` ayarını korur.
+- `npm test`, PGlite üzerinde eski şemadan yükseltme, tekrar migration, temiz kurulum, veri/ilerleme/izin koruması ve iki sentetik kullanıcının RLS izolasyonunu da sınar. Test veritabanı geçicidir; `.env.local` veya canlı Supabase kullanılmaz. Gerçek Supabase oturumu üzerinden uçtan uca yazma testi ayrıca yapılmalı.
+
+## Sezon yükleme akışı
+
+- İlk açılışta yalnız sezon özetleri gösterilir; özel sezonlar (sezon 0) önceki davranış gibi listelenmez.
+- Sezon açılınca `/api/shows/[id]/seasons/[seasonNumber]` çağrılır. TMDB erişimi ve token sunucuda kalır; mevcut 3600 saniyelik TMDB fetch önbelleği korunur.
+- Sayfa bileşeni yaşadığı sürece başarılı sezon yanıtları tekrar kullanılır; aynı dizi/sezon için devam eden istekler birleştirilir. Tam sayfa yenilemesi istemci önbelleğini sıfırlar.
+- Her sezonda yükleniyor, boş sonuç ve hata/“Tekrar dene” durumları vardır; başka sezonu açmak hatalı sezonu otomatik yeniden çağırmaz.
+- Bölüm verisi önbelleğe alınırken kullanıcı izlenme bilgisi güncel props üzerinden gelir. Supabase `toggleEpisode`, sahiplik kontrolü ve yol yenilemeleri değişmedi; yinelenen `user_shows` sorgusu kaldırıldı.
+- Etkileşim testleri React Testing Library + Happy DOM kullanır. Canlı TMDB/Supabase ile giriş ve gerçek bölüm yazma uçtan uca testi bu çalışmada yapılmadı.
 
 ## Lisans
 

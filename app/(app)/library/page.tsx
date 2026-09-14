@@ -6,6 +6,7 @@ import { getPosterUrl } from '@/lib/tmdb/client';
 import { getStatusLabel } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProgressBar } from '@/components/progress-bar';
+import { PersonalShowControls } from '@/components/personal-show-controls';
 import { StatusSelector } from '@/components/status-selector';
 import type { ShowStatus } from '@/lib/supabase/types';
 
@@ -66,6 +67,13 @@ export default async function LibraryPage() {
                     </Link>
                     <div className="mt-2">
                       <StatusSelector showId={show.id} currentStatus={show.status as ShowStatus} />
+                    </div>
+                    <div className="mt-2">
+                      <PersonalShowControls
+                        userShowId={show.id}
+                        initialIsFavorite={show.is_favorite ?? false}
+                        initialRating={show.rating ?? null}
+                      />
                     </div>
                     {show.total_episodes > 0 && (() => {
                       const watchedCount = (show as typeof show & { user_episodes: [{ count: number }] }).user_episodes?.[0]?.count ?? 0;

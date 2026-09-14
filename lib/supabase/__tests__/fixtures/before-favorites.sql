@@ -16,7 +16,6 @@ CREATE TABLE user_shows (
   rating smallint CHECK (rating >= 1 AND rating <= 10),
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
-  is_favorite boolean NOT NULL DEFAULT false,
   UNIQUE(user_id, tmdb_show_id)
 );
 
@@ -79,22 +78,12 @@ CREATE POLICY "user_episodes_delete" ON user_episodes
 -- 8. İzleme istatistiği view’ı
 CREATE OR REPLACE VIEW user_shows_with_progress WITH (security_invoker = true) AS
 SELECT
-  s.id,
-  s.user_id,
-  s.tmdb_show_id,
-  s.title,
-  s.poster_path,
-  s.total_episodes,
-  s.status,
-  s.rating,
-  s.created_at,
-  s.updated_at,
+  s.*,
   COUNT(e.id)::integer AS watched_episodes,
   CASE
     WHEN s.total_episodes = 0 THEN 0
     ELSE ROUND((COUNT(e.id)::numeric / s.total_episodes) * 100)::integer
-  END AS progress_percentage,
-  s.is_favorite
+  END AS progress_percentage
 FROM user_shows s
 LEFT JOIN user_episodes e ON e.user_show_id = s.id
 GROUP BY s.id;
