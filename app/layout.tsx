@@ -1,9 +1,6 @@
 import type { Metadata } from 'next';
-import { Geist } from 'next/font/google';
 import './globals.css';
 import SiteHeader from '@/components/site-header';
-
-const geist = Geist({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'BingeTrack',
@@ -17,7 +14,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="tr" className="dark">
-      <body className={geist.className}>
+      <body>
         <SiteHeader />
         {children}
       </body>

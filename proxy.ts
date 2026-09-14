@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -25,7 +25,7 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // Session'ı yenile — bu satır kritik, silme
+  // Oturumu yenilemek ve süresi dolan cookie'leri güncellemek için gereklidir.
   await supabase.auth.getUser();
 
   return supabaseResponse;
