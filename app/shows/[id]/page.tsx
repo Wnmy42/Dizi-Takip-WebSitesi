@@ -3,10 +3,10 @@ import { notFound } from 'next/navigation';
 import { Star, Calendar, Tv } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { AddShowButton } from '@/components/add-show-button';
-import { EpisodeList } from '@/components/episode-list';
 import { ProgressBar } from '@/components/progress-bar';
+import { SeasonAccordion } from '@/components/season-accordion';
 import { createClient } from '@/lib/supabase/server';
-import { getBackdropUrl, getPosterUrl, getShowDetails, getSeasonDetails } from '@/lib/tmdb/client';
+import { getBackdropUrl, getPosterUrl, getShowDetails } from '@/lib/tmdb/client';
 
 interface ShowDetailPageProps {
   params: Promise<{ id: string }>;
@@ -27,17 +27,6 @@ export default async function ShowDetailPage({ params }: ShowDetailPageProps) {
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  let isInLibrary = false;
-  if (user) {
-    const { data } = await supabase
-      .from('user_shows')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('tmdb_show_id', showId)
-      .single();
-    isInLibrary = !!data;
-  }
-
   // Kullanıcı kendi bölüm ilerlemesini çek
   let userShow: { id: string; total_episodes: number } | null = null;
   const watchedEpisodeKeys = new Set<string>();
@@ -62,6 +51,8 @@ export default async function ShowDetailPage({ params }: ShowDetailPageProps) {
       });
     }
   }
+
+  const isInLibrary = !!userShow;
 
   const backdropUrl = getBackdropUrl(show.backdrop_path, 'w1280');
   const posterUrl = getPosterUrl(show.poster_path, 'w342');
@@ -152,40 +143,13 @@ export default async function ShowDetailPage({ params }: ShowDetailPageProps) {
         {show.seasons && show.seasons.length > 0 && (
           <section className="mt-10 mb-10">
             <h2 className="text-xl font-bold mb-4">Sezonlar</h2>
-            <div className="space-y-8">
-              {await Promise.all(
-                show.seasons
-                  .filter((s) => s.season_number > 0)
-                  .map(async (season) => {
-                    const detail = await getSeasonDetails(show.id, season.season_number);
-                    return (
-                      <div key={season.id} className="border rounded-lg p-4">
-                        {userShow ? (
-                          <EpisodeList
-                            season={detail}
-                            userShowId={userShow.id}
-                            watchedEpisodeKeys={watchedEpisodeKeys}
-                            tmdbShowId={show.id}
-                          />
-                        ) : (
-                          <div>
-                            <h3 className="font-semibold mb-3">{season.name}</h3>
-                            <div className="space-y-1">
-                              {detail.episodes.map((ep) => (
-                                <div key={ep.id} className="flex items-center gap-3 p-2 text-sm">
-                                  <span className="text-muted-foreground w-8">B{ep.episode_number}</span>
-                                  <span className="flex-1 truncate">{ep.name}</span>
-                                  {ep.runtime && <span className="text-muted-foreground text-xs">{ep.runtime}dk</span>}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-              )}
-            </div>
+            <SeasonAccordion
+              key={show.id}
+              seasons={show.seasons.filter((season) => season.season_number > 0)}
+              showId={show.id}
+              userShowId={userShow?.id ?? null}
+              watchedEpisodeKeys={[...watchedEpisodeKeys]}
+            />
           </section>
         )}
       </div>
