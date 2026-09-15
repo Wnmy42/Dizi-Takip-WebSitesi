@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
 import { Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { toggleEpisode } from '@/lib/supabase/actions';
@@ -28,18 +28,29 @@ function EpisodeRow({
 }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const isSubmitting = useRef(false);
 
   function handleToggle() {
+    if (isSubmitting.current) return;
+    isSubmitting.current = true;
+    setError(null);
+
     startTransition(async () => {
-      const result = await toggleEpisode({
-        userShowId,
-        tmdbShowId,
-        seasonNumber,
-        episodeNumber: episode.episode_number,
-        isWatched,
-      });
-      if (result?.error) {
-        setError(result.error);
+      try {
+        const result = await toggleEpisode({
+          userShowId,
+          tmdbShowId,
+          seasonNumber,
+          episodeNumber: episode.episode_number,
+          isWatched,
+        });
+        if (result?.error) {
+          setError(result.error);
+        }
+      } catch {
+        setError('İşlem tamamlanamadı. Tekrar deneyin.');
+      } finally {
+        isSubmitting.current = false;
       }
     });
   }

@@ -100,14 +100,20 @@ describe('PersonalShowControls', () => {
     const ratingSelect = screen.getByLabelText('Kişisel puanım') as HTMLSelectElement;
 
     fireEvent.change(ratingSelect, { target: { value: '9' } });
-    expect((await screen.findByRole('status')).textContent).toContain('9/10');
+    await waitFor(() => {
+      expect(ratingSelect.disabled).toBe(false);
+      expect(screen.getByRole('status').textContent).toContain('9/10');
+    });
     expect(setShowRating).toHaveBeenLastCalledWith(FIRST_SHOW_ID, 9);
     expect(screen.getByRole('button', { name: 'Favorilerden çıkar' }).getAttribute('aria-pressed')).toBe('true');
 
     fireEvent.change(ratingSelect, { target: { value: '' } });
-    expect((await screen.findByRole('status')).textContent).toContain('temizlendi');
-    expect(setShowRating).toHaveBeenLastCalledWith(FIRST_SHOW_ID, null);
-    expect(ratingSelect.value).toBe('');
+    await waitFor(() => {
+      expect(ratingSelect.disabled).toBe(false);
+      expect(screen.getByRole('status').textContent).toContain('temizlendi');
+      expect(setShowRating).toHaveBeenLastCalledWith(FIRST_SHOW_ID, null);
+      expect(ratingSelect.value).toBe('');
+    });
   });
 
   it('surfaces rejected action promises as a retryable error', async () => {
