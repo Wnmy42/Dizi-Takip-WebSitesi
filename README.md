@@ -51,7 +51,7 @@ cp .env.example .env.local
 
 Supabase SQL Editor'da [`supabase-migrations.sql`](./supabase-migrations.sql) içeriğini çalıştır.
 
-Bu dosya **yeni veritabanı kurulumu** içindir. Mevcut veritabanında bootstrap dosyasını yeniden çalıştırma; uygulamanın yeni sürümünü kullanmadan önce yalnız [`20260913180000_add_user_show_favorites.sql`](./supabase/migrations/20260913180000_add_user_show_favorites.sql) migration'ını çalıştır. Migration tekrar uygulanabilir; mevcut puanları, bölüm ilerlemesini, RLS politikalarını ve görünüm izinlerini korur. Bu çalışma sırasında canlı Supabase'e uygulanmadı.
+Bu dosya **yeni veritabanı kurulumu** içindir. Mevcut veritabanında bootstrap dosyasını yeniden çalıştırma; `supabase/migrations/` altındaki migration'ları tarih sırasıyla uygula. Favori migration'ı 15 Eylül, [`20260916230000_add_data_integrity_checks.sql`](./supabase/migrations/20260916230000_add_data_integrity_checks.sql) ise 16 Eylül 2026'da mevcut canlı Dizi-Takip projesine uygulandı. Migration'lar tekrar uygulanabilir; mevcut veri, RLS politikaları ve görünüm izinleri korunur.
 
 ### 4. Geliştirme sunucusunu başlat
 
@@ -93,6 +93,7 @@ lib/
 - [x] Çevrimdışı/CI uyumlu sistem fontları
 - [x] Favori diziler
 - [x] Kişisel 1–10 puan verme, değiştirme ve temizleme
+- [x] Server Action runtime doğrulaması ve veritabanı `CHECK` kısıtları
 - [ ] Kişisel dizi notları
 - [x] Sezon accordion ve talep üzerine bölüm yükleme
 - [ ] İstatistik sayfası
@@ -100,16 +101,17 @@ lib/
 
 ## Güncel Durum
 
-Son doğrulama: **13 Eylül 2026**
+Son doğrulama: **16 Eylül 2026**
 
 - Lint ve TypeScript kontrolü geçiyor.
-- 9 test dosyasında toplam 54 test geçiyor; accordion, favori/puan action ve arayüzleri, sayfa entegrasyonları ve PostgreSQL migration testleri dahil.
+- 11 test dosyasında toplam 99 test geçiyor; Server Action girdi sınırları, sıfır-satır yetki sonuçları, migration'ın atomik geri alınması, accordion, bölüm toggle hata/tekrar deneme akışı, favori/puan arayüzleri ve PostgreSQL migration testleri dahil.
 - Üretim derlemesi geçiyor ve harici font indirmesine ihtiyaç duymuyor.
 - Kullanılmayan TanStack Query bağımlılığı kaldırıldı; mevcut veri akışı Server Components ve Server Actions kullanıyor.
 - Önceki bağımlılık doğrulamasında `npm audit` sonucu 0 güvenlik açığıydı; accordion çalışmasında audit yeniden çalıştırılmadı.
 - React 19.3, ESLint 10, TypeScript 7 ve Node tipleri 26 gibi büyük sürüm geçişleri uyumluluk çalışması gerektirdiği için otomatik uygulanmadı.
 - Supabase migration dosyasında `user_shows_with_progress` görünümü `security_invoker = true` olarak tanımlı.
-- Canlı Supabase projesinde migration ve iki kullanıcılı RLS testi ayrıca doğrulanmalı.
+- Canlı Supabase projesinde favori migration'ı uygulandı. İkinci bir JWT kimliğiyle show/view/episode çapraz erişimi transaction içinde sınandı; yetkisiz okuma, güncelleme ve silme sıfır satır döndürdü, bölüm ekleme RLS tarafından engellendi ve test değişiklikleri geri alındı.
+- Canlı Supabase projesinde altı veri bütünlüğü `CHECK` kısıtı uygulandı ve `validated=true` olarak doğrulandı; mevcut 4 dizi ve 11 bölüm kaydı korundu.
 
 ## Favori ve kişisel puan akışı
 

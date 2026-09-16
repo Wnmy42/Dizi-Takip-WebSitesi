@@ -8,10 +8,10 @@ CREATE TYPE show_status AS ENUM ('watching', 'plan_to_watch', 'completed', 'drop
 CREATE TABLE user_shows (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  tmdb_show_id integer NOT NULL,
-  title text NOT NULL,
-  poster_path text,
-  total_episodes integer NOT NULL DEFAULT 0,
+  tmdb_show_id integer NOT NULL CONSTRAINT user_shows_tmdb_show_id_positive CHECK (tmdb_show_id > 0),
+  title text NOT NULL CONSTRAINT user_shows_title_valid CHECK (char_length(btrim(title)) BETWEEN 1 AND 200),
+  poster_path text CONSTRAINT user_shows_poster_path_valid CHECK (poster_path IS NULL OR char_length(btrim(poster_path)) BETWEEN 1 AND 500),
+  total_episodes integer NOT NULL DEFAULT 0 CONSTRAINT user_shows_total_episodes_nonnegative CHECK (total_episodes >= 0),
   status show_status NOT NULL DEFAULT 'plan_to_watch',
   rating smallint CHECK (rating >= 1 AND rating <= 10),
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -24,8 +24,8 @@ CREATE TABLE user_shows (
 CREATE TABLE user_episodes (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_show_id uuid NOT NULL REFERENCES user_shows(id) ON DELETE CASCADE,
-  season_number integer NOT NULL,
-  episode_number integer NOT NULL,
+  season_number integer NOT NULL CONSTRAINT user_episodes_season_number_positive CHECK (season_number > 0),
+  episode_number integer NOT NULL CONSTRAINT user_episodes_episode_number_positive CHECK (episode_number > 0),
   watched_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE(user_show_id, season_number, episode_number)
 );

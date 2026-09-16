@@ -11,12 +11,15 @@ vi.mock('@/lib/supabase/server', () => ({ createClient }));
 
 import {
   addShow,
+  removeShow,
   setShowFavorite,
   setShowRating,
   toggleEpisode,
+  updateShowStatus,
 } from '@/lib/supabase/actions';
 
 const USER_SHOW_ID = '8d50c4a7-3ff8-47d6-bbe9-3b825b35ef2d';
+const ANOTHER_USER_SHOW_ID = 'c4736f96-92ae-4a4c-8af9-718d68b28a7b';
 
 function deleteQuery(error: { message: string } | null) {
   const chain = {
@@ -68,7 +71,7 @@ describe('toggleEpisode', () => {
     const { ownershipQuery } = mockAuthenticatedClient({ insert });
 
     const result = await toggleEpisode({
-      userShowId: 'user-show-id',
+      userShowId: USER_SHOW_ID,
       tmdbShowId: 1399,
       seasonNumber: 1,
       episodeNumber: 1,
@@ -78,10 +81,10 @@ describe('toggleEpisode', () => {
     expect(result).toEqual({ error: 'insert failed' });
     expect(ownershipQuery.select).toHaveBeenCalledExactlyOnceWith('id');
     expect(ownershipQuery.eq).toHaveBeenCalledTimes(2);
-    expect(ownershipQuery.eq).toHaveBeenCalledWith('id', 'user-show-id');
+    expect(ownershipQuery.eq).toHaveBeenCalledWith('id', USER_SHOW_ID);
     expect(ownershipQuery.eq).toHaveBeenCalledWith('user_id', 'user-id');
     expect(insert).toHaveBeenCalledExactlyOnceWith({
-      user_show_id: 'user-show-id',
+      user_show_id: USER_SHOW_ID,
       season_number: 1,
       episode_number: 1,
     });
@@ -93,7 +96,7 @@ describe('toggleEpisode', () => {
     mockAuthenticatedClient(query);
 
     const result = await toggleEpisode({
-      userShowId: 'user-show-id',
+      userShowId: USER_SHOW_ID,
       tmdbShowId: 1399,
       seasonNumber: 1,
       episodeNumber: 1,
@@ -102,7 +105,7 @@ describe('toggleEpisode', () => {
 
     expect(result).toEqual({ error: 'delete failed' });
     expect(query.eq).toHaveBeenCalledTimes(3);
-    expect(query.eq).toHaveBeenCalledWith('user_show_id', 'user-show-id');
+    expect(query.eq).toHaveBeenCalledWith('user_show_id', USER_SHOW_ID);
     expect(query.eq).toHaveBeenCalledWith('season_number', 1);
     expect(query.eq).toHaveBeenCalledWith('episode_number', 1);
     expect(revalidatePath).not.toHaveBeenCalled();
@@ -113,7 +116,7 @@ describe('toggleEpisode', () => {
     mockAuthenticatedClient({ insert });
 
     const result = await toggleEpisode({
-      userShowId: 'uuid-value',
+      userShowId: USER_SHOW_ID,
       tmdbShowId: 1399,
       seasonNumber: 1,
       episodeNumber: 2,
@@ -122,13 +125,13 @@ describe('toggleEpisode', () => {
 
     expect(result).toEqual({ success: true });
     expect(insert).toHaveBeenCalledExactlyOnceWith({
-      user_show_id: 'uuid-value',
+      user_show_id: USER_SHOW_ID,
       season_number: 1,
       episode_number: 2,
     });
     expect(revalidatePath).toHaveBeenNthCalledWith(1, '/library');
     expect(revalidatePath).toHaveBeenNthCalledWith(2, '/shows/1399');
-    expect(revalidatePath).not.toHaveBeenCalledWith('/shows/uuid-value');
+    expect(revalidatePath).not.toHaveBeenCalledWith(`/shows/${USER_SHOW_ID}`);
   });
 
   it('deletes the exact watched episode and revalidates after success', async () => {
@@ -136,7 +139,7 @@ describe('toggleEpisode', () => {
     mockAuthenticatedClient(query);
 
     const result = await toggleEpisode({
-      userShowId: 'user-show-id',
+      userShowId: USER_SHOW_ID,
       tmdbShowId: 2316,
       seasonNumber: 4,
       episodeNumber: 7,
@@ -146,7 +149,7 @@ describe('toggleEpisode', () => {
     expect(result).toEqual({ success: true });
     expect(query.delete).toHaveBeenCalledOnce();
     expect(query.eq).toHaveBeenCalledTimes(3);
-    expect(query.eq).toHaveBeenCalledWith('user_show_id', 'user-show-id');
+    expect(query.eq).toHaveBeenCalledWith('user_show_id', USER_SHOW_ID);
     expect(query.eq).toHaveBeenCalledWith('season_number', 4);
     expect(query.eq).toHaveBeenCalledWith('episode_number', 7);
     expect(revalidatePath).toHaveBeenNthCalledWith(1, '/library');
@@ -163,7 +166,7 @@ describe('toggleEpisode', () => {
     });
 
     const result = await toggleEpisode({
-      userShowId: 'user-show-id',
+      userShowId: USER_SHOW_ID,
       tmdbShowId: 1399,
       seasonNumber: 1,
       episodeNumber: 1,
@@ -183,7 +186,7 @@ describe('toggleEpisode', () => {
     const { from, ownershipQuery } = mockAuthenticatedClient(episodeQuery, null);
 
     const result = await toggleEpisode({
-      userShowId: 'another-users-show',
+      userShowId: ANOTHER_USER_SHOW_ID,
       tmdbShowId: 1399,
       seasonNumber: 1,
       episodeNumber: 1,
@@ -195,10 +198,27 @@ describe('toggleEpisode', () => {
     expect(from).toHaveBeenCalledWith('user_shows');
     expect(ownershipQuery.select).toHaveBeenCalledExactlyOnceWith('id');
     expect(ownershipQuery.eq).toHaveBeenCalledTimes(2);
-    expect(ownershipQuery.eq).toHaveBeenCalledWith('id', 'another-users-show');
+    expect(ownershipQuery.eq).toHaveBeenCalledWith('id', ANOTHER_USER_SHOW_ID);
     expect(ownershipQuery.eq).toHaveBeenCalledWith('user_id', 'user-id');
     expect(episodeQuery.insert).not.toHaveBeenCalled();
     expect(episodeQuery.delete).not.toHaveBeenCalled();
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    null,
+    {},
+    { userShowId: 'not-a-uuid', tmdbShowId: 1399, seasonNumber: 1, episodeNumber: 1, isWatched: false },
+    { userShowId: USER_SHOW_ID, tmdbShowId: 0, seasonNumber: 1, episodeNumber: 1, isWatched: false },
+    { userShowId: USER_SHOW_ID, tmdbShowId: 1399, seasonNumber: 0, episodeNumber: 1, isWatched: false },
+    { userShowId: USER_SHOW_ID, tmdbShowId: 1399, seasonNumber: 1, episodeNumber: -1, isWatched: false },
+    { userShowId: USER_SHOW_ID, tmdbShowId: 1399, seasonNumber: 1, episodeNumber: 1.5, isWatched: false },
+    { userShowId: USER_SHOW_ID, tmdbShowId: 1399, seasonNumber: 1, episodeNumber: 1, isWatched: 'false' },
+  ])('rejects malformed episode input before creating a database client', async (input) => {
+    const result = await toggleEpisode(input as never);
+
+    expect(result).toEqual({ error: 'Geçersiz bölüm bilgisi' });
+    expect(createClient).not.toHaveBeenCalled();
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 });
@@ -362,5 +382,156 @@ describe('addShow', () => {
     }, { onConflict: 'user_id,tmdb_show_id' });
     expect(revalidatePath).toHaveBeenNthCalledWith(1, '/library');
     expect(revalidatePath).toHaveBeenNthCalledWith(2, '/shows/1399');
+  });
+
+  it('trims bounded text fields and accepts zero as the unknown total episode sentinel', async () => {
+    const chain = {
+      upsert: vi.fn(),
+      select: vi.fn(),
+      single: vi.fn().mockResolvedValue({ data: { tmdb_show_id: 2316 }, error: null }),
+    };
+    chain.upsert.mockReturnValue(chain);
+    chain.select.mockReturnValue(chain);
+    createClient.mockResolvedValue({
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-id' } } }) },
+      from: vi.fn().mockReturnValue(chain),
+    });
+
+    const result = await addShow({
+      tmdb_show_id: 2316,
+      title: '  The Office  ',
+      poster_path: '  /poster.jpg  ',
+      total_episodes: 0,
+      status: 'plan_to_watch',
+    });
+
+    expect(result).toEqual({ success: true });
+    expect(chain.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'The Office',
+      poster_path: '/poster.jpg',
+      total_episodes: 0,
+    }), expect.anything());
+  });
+
+  it.each([
+    null,
+    {},
+    { tmdb_show_id: 0, title: 'Dizi', poster_path: null, total_episodes: 1, status: 'watching' },
+    { tmdb_show_id: 1.5, title: 'Dizi', poster_path: null, total_episodes: 1, status: 'watching' },
+    { tmdb_show_id: 1, title: '   ', poster_path: null, total_episodes: 1, status: 'watching' },
+    { tmdb_show_id: 1, title: 'x'.repeat(201), poster_path: null, total_episodes: 1, status: 'watching' },
+    { tmdb_show_id: 1, title: 'Dizi', poster_path: '', total_episodes: 1, status: 'watching' },
+    { tmdb_show_id: 1, title: 'Dizi', poster_path: 'x'.repeat(501), total_episodes: 1, status: 'watching' },
+    { tmdb_show_id: 1, title: 'Dizi', poster_path: null, total_episodes: -1, status: 'watching' },
+    { tmdb_show_id: 1, title: 'Dizi', poster_path: null, total_episodes: 1.2, status: 'watching' },
+    { tmdb_show_id: 1, title: 'Dizi', poster_path: null, total_episodes: 1, status: 'paused' },
+  ])('rejects malformed show data before creating a database client', async (input) => {
+    const result = await addShow(input as never);
+
+    expect(result).toEqual({ error: 'Geçersiz dizi bilgisi' });
+    expect(createClient).not.toHaveBeenCalled();
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+});
+
+describe('show mutation identifiers and status', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it.each([
+    ['', 'watching'],
+    ['not-a-uuid', 'watching'],
+    [42, 'watching'],
+  ])('rejects an invalid show id before a status update', async (showId, status) => {
+    const result = await updateShowStatus(showId as never, status as never);
+
+    expect(result).toEqual({ error: 'Geçersiz dizi kimliği' });
+    expect(createClient).not.toHaveBeenCalled();
+  });
+
+  it.each(['paused', '', 1, null])('rejects an invalid status before querying the database: %s', async (status) => {
+    const result = await updateShowStatus(USER_SHOW_ID, status as never);
+
+    expect(result).toEqual({ error: 'Geçersiz dizi durumu' });
+    expect(createClient).not.toHaveBeenCalled();
+  });
+
+  it.each(['', 'not-a-uuid', 42, null])('rejects an invalid remove id before querying the database: %s', async (showId) => {
+    const result = await removeShow(showId as never);
+
+    expect(result).toEqual({ error: 'Geçersiz dizi kimliği' });
+    expect(createClient).not.toHaveBeenCalled();
+  });
+
+  function mutationQuery(data: { id?: string; tmdb_show_id?: number } | null) {
+    const chain = {
+      update: vi.fn(),
+      delete: vi.fn(),
+      eq: vi.fn(),
+      select: vi.fn(),
+      maybeSingle: vi.fn().mockResolvedValue({ data, error: null }),
+    };
+    chain.update.mockReturnValue(chain);
+    chain.delete.mockReturnValue(chain);
+    chain.eq.mockReturnValue(chain);
+    chain.select.mockReturnValue(chain);
+    return chain;
+  }
+
+  function mockMutationClient(query: ReturnType<typeof mutationQuery>) {
+    createClient.mockResolvedValue({
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-id' } } }) },
+      from: vi.fn().mockReturnValue(query),
+    });
+  }
+
+  it('does not report success when an owner-scoped status update affects zero rows', async () => {
+    const query = mutationQuery(null);
+    mockMutationClient(query);
+
+    const result = await updateShowStatus(USER_SHOW_ID, 'completed');
+
+    expect(result).toEqual({ error: 'Dizi bulunamadı veya güncelleme yetkiniz yok' });
+    expect(query.eq).toHaveBeenNthCalledWith(1, 'id', USER_SHOW_ID);
+    expect(query.eq).toHaveBeenNthCalledWith(2, 'user_id', 'user-id');
+    expect(query.select).toHaveBeenCalledExactlyOnceWith('tmdb_show_id');
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it('revalidates the library and trusted detail route after a status update', async () => {
+    const query = mutationQuery({ tmdb_show_id: 1399 });
+    mockMutationClient(query);
+
+    const result = await updateShowStatus(USER_SHOW_ID, 'completed');
+
+    expect(result).toEqual({ success: true });
+    expect(query.update).toHaveBeenCalledExactlyOnceWith({ status: 'completed' });
+    expect(revalidatePath).toHaveBeenNthCalledWith(1, '/library');
+    expect(revalidatePath).toHaveBeenNthCalledWith(2, '/shows/1399');
+  });
+
+  it('does not report success when an owner-scoped delete affects zero rows', async () => {
+    const query = mutationQuery(null);
+    mockMutationClient(query);
+
+    const result = await removeShow(USER_SHOW_ID);
+
+    expect(result).toEqual({ error: 'Dizi bulunamadı veya silme yetkiniz yok' });
+    expect(query.eq).toHaveBeenNthCalledWith(1, 'id', USER_SHOW_ID);
+    expect(query.eq).toHaveBeenNthCalledWith(2, 'user_id', 'user-id');
+    expect(query.select).toHaveBeenCalledExactlyOnceWith('id');
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it('revalidates the library after an owner-scoped delete', async () => {
+    const query = mutationQuery({ id: USER_SHOW_ID });
+    mockMutationClient(query);
+
+    const result = await removeShow(USER_SHOW_ID);
+
+    expect(result).toEqual({ success: true });
+    expect(query.delete).toHaveBeenCalledOnce();
+    expect(revalidatePath).toHaveBeenCalledExactlyOnceWith('/library');
   });
 });
