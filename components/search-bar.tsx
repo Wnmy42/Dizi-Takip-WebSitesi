@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useTransition, useEffect, useRef } from 'react';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { MAX_SEARCH_QUERY_LENGTH, normalizeSearchQuery } from '@/lib/search/query';
 
 export function SearchBar({ defaultValue = '' }: { defaultValue?: string }) {
   const router = useRouter();
@@ -25,13 +26,16 @@ export function SearchBar({ defaultValue = '' }: { defaultValue?: string }) {
 
     timerRef.current = setTimeout(() => {
       const params = new URLSearchParams(searchParams.toString());
-      if (newValue) {
-        params.set('q', newValue);
+      const normalizedValue = normalizeSearchQuery(newValue);
+      if (normalizedValue) {
+        params.set('q', normalizedValue);
       } else {
         params.delete('q');
       }
+      params.delete('page');
       startTransition(() => {
-        router.replace(`/discover?${params.toString()}`);
+        const queryString = params.toString();
+        router.replace(queryString ? `/discover?${queryString}` : '/discover');
       });
     }, 300);
   }
@@ -44,6 +48,8 @@ export function SearchBar({ defaultValue = '' }: { defaultValue?: string }) {
         placeholder="Dizi ara..."
         value={value}
         onChange={handleChange}
+        maxLength={MAX_SEARCH_QUERY_LENGTH}
+        aria-label="Dizi ara"
         className={`pl-9 ${isPending ? 'opacity-70' : ''}`}
       />
     </div>

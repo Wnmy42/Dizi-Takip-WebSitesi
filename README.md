@@ -21,6 +21,7 @@ Kişisel dizi takip uygulaması. İzlediğin dizileri listele, bölüm bölüm i
 - 📊 İlerleme yüzdesi ve devam et butonu
 - ❤️ Kütüphanedeki dizileri favorilere ekle/çıkar
 - ⭐ Dizi detayında ve kütüphanede kişisel 1–10 puan ver, değiştir veya temizle
+- 🛡️ Aramada girdi sınırları, kalıcı hız limiti ve TMDB geçici hata dayanıklılığı
 
 ## Kurulum
 
@@ -51,7 +52,7 @@ cp .env.example .env.local
 
 Supabase SQL Editor'da [`supabase-migrations.sql`](./supabase-migrations.sql) içeriğini çalıştır.
 
-Bu dosya **yeni veritabanı kurulumu** içindir. Mevcut veritabanında bootstrap dosyasını yeniden çalıştırma; `supabase/migrations/` altındaki migration'ları tarih sırasıyla uygula. Favori migration'ı 15 Eylül, [`20260916230000_add_data_integrity_checks.sql`](./supabase/migrations/20260916230000_add_data_integrity_checks.sql) ise 16 Eylül 2026'da mevcut canlı Dizi-Takip projesine uygulandı. Migration'lar tekrar uygulanabilir; mevcut veri, RLS politikaları ve görünüm izinleri korunur.
+Bu dosya **yeni veritabanı kurulumu** içindir. Mevcut veritabanında bootstrap dosyasını yeniden çalıştırma; `supabase/migrations/` altındaki migration'ları tarih sırasıyla uygula. Favori migration'ı 15 Eylül, veri bütünlüğü migration'ı 16 Eylül ve [`20260916235500_add_search_rate_limit.sql`](./supabase/migrations/20260916235500_add_search_rate_limit.sql) 17 Eylül 2026'da mevcut canlı Dizi-Takip projesine uygulandı. Migration'lar tekrar uygulanabilir; mevcut veri, RLS politikaları ve görünüm izinleri korunur.
 
 ### 4. Geliştirme sunucusunu başlat
 
@@ -94,6 +95,7 @@ lib/
 - [x] Favori diziler
 - [x] Kişisel 1–10 puan verme, değiştirme ve temizleme
 - [x] Server Action runtime doğrulaması ve veritabanı `CHECK` kısıtları
+- [x] Public arama koruması ve TMDB retry/backoff akışı
 - [ ] Kişisel dizi notları
 - [x] Sezon accordion ve talep üzerine bölüm yükleme
 - [ ] İstatistik sayfası
@@ -104,7 +106,7 @@ lib/
 Son doğrulama: **16 Eylül 2026**
 
 - Lint ve TypeScript kontrolü geçiyor.
-- 11 test dosyasında toplam 99 test geçiyor; Server Action girdi sınırları, sıfır-satır yetki sonuçları, migration'ın atomik geri alınması, accordion, bölüm toggle hata/tekrar deneme akışı, favori/puan arayüzleri ve PostgreSQL migration testleri dahil.
+- 18 test dosyasında toplam 161 test geçiyor; Server Action sınırları, arama girdi/body sınırları, kalıcı rate limit, TMDB retry/backoff, kontrollü hata arayüzü, migration atomikliği, accordion, bölüm toggle ve favori/puan akışları dahil.
 - Üretim derlemesi geçiyor ve harici font indirmesine ihtiyaç duymuyor.
 - Kullanılmayan TanStack Query bağımlılığı kaldırıldı; mevcut veri akışı Server Components ve Server Actions kullanıyor.
 - Önceki bağımlılık doğrulamasında `npm audit` sonucu 0 güvenlik açığıydı; accordion çalışmasında audit yeniden çalıştırılmadı.
@@ -112,6 +114,15 @@ Son doğrulama: **16 Eylül 2026**
 - Supabase migration dosyasında `user_shows_with_progress` görünümü `security_invoker = true` olarak tanımlı.
 - Canlı Supabase projesinde favori migration'ı uygulandı. İkinci bir JWT kimliğiyle show/view/episode çapraz erişimi transaction içinde sınandı; yetkisiz okuma, güncelleme ve silme sıfır satır döndürdü, bölüm ekleme RLS tarafından engellendi ve test değişiklikleri geri alındı.
 - Canlı Supabase projesinde altı veri bütünlüğü `CHECK` kısıtı uygulandı ve `validated=true` olarak doğrulandı; mevcut 4 dizi ve 11 bölüm kaydı korundu.
+
+## Arama koruması
+
+- Arama metni sunucuda trim edilir ve iç boşluklar sadeleştirilir; 2–100 karakter sınırı ile kontrol/NUL karakter reddi TMDB çağrısından önce uygulanır.
+- `/api/search` aramaları istemci başına 60 saniyede 10 istekle sınırlanır. Sayaç Supabase RPC içinde atomik tutulduğu için Vercel'in birden fazla sunucu örneğinde ortaktır. Ham IP saklanmaz; yalnız mevcut server secret ile üretilen HMAC parmak izi veritabanına yazılır.
+- TMDB istekleri 8 saniyede zaman aşımına uğrar. Ağ hataları, 408, 425, 429 ve 5xx yanıtları en fazla üç toplam deneme ve sınırlı exponential backoff ile yeniden denenir; `Retry-After` dikkate alınır. Diğer 4xx yanıtları yeniden denenmez.
+- Kota, hız limiti, bozuk upstream yanıtı ve geçici servis hataları kullanıcıya sabit mesajlarla gösterilir; upstream ayrıntıları istemciye dönmez.
+- Bu P0.3 kapsamı yalnız kullanıcı aramasını korur. Popüler ve trend bölümlerinin ayrı hata/fallback arayüzü sonraki dayanıklılık çalışmasına bırakılmıştır.
+- `supabase/migrations/20260916235500_add_search_rate_limit.sql` 17 Eylül 2026'da canlıya uygulandı. RLS ve `SECURITY DEFINER` doğrulandı; tablo erişimi `anon`/`authenticated` için kapalı, RPC çalıştırma yetkisi yalnız `service_role` rolünde. Yeni kurulum bootstrap SQL'i aynı tablo ve RPC tanımını içerir.
 
 ## Favori ve kişisel puan akışı
 

@@ -1,20 +1,24 @@
 import { Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { getTrendingShows, getPopularShows, searchShows, getPosterUrl } from '@/lib/tmdb/client';
+import { getTrendingShows, getPopularShows, getPosterUrl } from '@/lib/tmdb/client';
 import { ShowCard } from '@/components/show-card';
 import { SearchBar } from '@/components/search-bar';
+import { SearchResults } from '@/components/search-results';
 import { ProgressBar } from '@/components/progress-bar';
 import { createClient } from '@/lib/supabase/server';
+import {
+  getSearchQueryError,
+  MAX_SEARCH_QUERY_LENGTH,
+  parseSearchQuery,
+} from '@/lib/search/query';
 
 interface DiscoverPageProps {
-  searchParams: Promise<{ q?: string; page?: string }>;
+  searchParams: Promise<{ q?: string | string[]; page?: string | string[] }>;
 }
 
-async function ShowGrid({ query, page }: { query?: string; page: number }) {
-  const data = query
-    ? await searchShows(query, page)
-    : await getPopularShows(page);
+async function PopularShowGrid({ page }: { page: number }) {
+  const data = await getPopularShows(page);
 
   if (data.results.length === 0) {
     return (
@@ -84,7 +88,11 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
   }
 
   const { q, page: pageStr } = await searchParams;
-  const rawPage = Number(pageStr ?? '1');
+  const rawQuery = typeof q === 'string' ? q : '';
+  const parsedQuery = parseSearchQuery(rawQuery);
+  const hasInvalidQuery = rawQuery.trim().length > 0 && !parsedQuery.ok;
+  const activeQuery = parsedQuery.ok ? parsedQuery.query : null;
+  const rawPage = Number(typeof pageStr === 'string' ? pageStr : '1');
   const page = Number.isFinite(rawPage) && rawPage > 0 ? Math.min(Math.floor(rawPage), 500) : 1;
 
   return (
@@ -93,7 +101,10 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
         <h1 className="text-3xl font-bold mb-2">Keşfet</h1>
         <p className="text-muted-foreground mb-4">Yeni diziler bul, listene ekle.</p>
         <Suspense>
-          <SearchBar defaultValue={q} />
+          <SearchBar
+            key={rawQuery}
+            defaultValue={rawQuery.slice(0, MAX_SEARCH_QUERY_LENGTH)}
+          />
         </Suspense>
       </div>
 
@@ -128,7 +139,7 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
         </section>
       )}
 
-      {!q && (
+      {!activeQuery && !hasInvalidQuery && (
         <Suspense fallback={<div className="h-48 animate-pulse bg-muted rounded-lg" />}>
           <TrendingSection />
         </Suspense>
@@ -136,20 +147,28 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
 
       <section>
         <h2 className="text-xl font-bold mb-4">
-          {q ? `"${q}" için sonuçlar` : 'Popüler Diziler'}
+          {activeQuery ? `"${activeQuery}" için sonuçlar` : hasInvalidQuery ? 'Arama' : 'Popüler Diziler'}
         </h2>
-        <Suspense
-          key={`${q}-${page}`}
-          fallback={
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {Array.from({ length: 10 }).map((_, i) => (
-                <div key={i} className="aspect-[2/3] animate-pulse bg-muted rounded-lg" />
-              ))}
-            </div>
-          }
-        >
-          <ShowGrid query={q} page={page} />
-        </Suspense>
+        {activeQuery ? (
+          <SearchResults key={`${activeQuery}-${page}`} query={activeQuery} page={page} />
+        ) : hasInvalidQuery && !parsedQuery.ok ? (
+          <div className="text-center py-16 text-muted-foreground">
+            <p role="alert">{getSearchQueryError(parsedQuery.reason)}</p>
+          </div>
+        ) : (
+          <Suspense
+            key={`popular-${page}`}
+            fallback={
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <div key={i} className="aspect-[2/3] animate-pulse bg-muted rounded-lg" />
+                ))}
+              </div>
+            }
+          >
+            <PopularShowGrid page={page} />
+          </Suspense>
+        )}
       </section>
     </main>
   );

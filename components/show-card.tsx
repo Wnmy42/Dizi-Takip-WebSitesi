@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Star } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { getPosterUrl } from '@/lib/tmdb/client';
+import { getPosterUrl } from '@/lib/tmdb/images';
 import type { TMDBShow } from '@/lib/tmdb/types';
 
 interface ShowCardProps {
