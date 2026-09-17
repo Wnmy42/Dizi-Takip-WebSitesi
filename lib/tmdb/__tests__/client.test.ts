@@ -51,12 +51,32 @@ describe('TMDB client URL construction', () => {
     );
   });
 
+  it('authenticates upstream requests with the configured Bearer token', async () => {
+    await getPopularShows();
+
+    expect(fetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: 'Bearer test-token' }),
+      }),
+    );
+  });
+
   it('normalizes search input before constructing the upstream URL', async () => {
     await searchShows('  Better   Call Saul  ', 2);
 
     expect(fetch).toHaveBeenCalledWith(
       'https://api.themoviedb.org/3/search/tv?query=Better%20Call%20Saul&page=2&include_adult=false&language=tr-TR',
       expect.objectContaining({ next: { revalidate: 60 } }),
+    );
+  });
+
+  it('encodes reserved and Unicode search characters while preserving pagination', async () => {
+    await searchShows('A&B / İstanbul?', 37);
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.themoviedb.org/3/search/tv?query=A%26B%20%2F%20%C4%B0stanbul%3F&page=37&include_adult=false&language=tr-TR',
+      expect.any(Object),
     );
   });
 

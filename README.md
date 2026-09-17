@@ -106,7 +106,7 @@ lib/
 Son doğrulama: **17 Eylül 2026**
 
 - Lint ve TypeScript kontrolü geçiyor.
-- 18 test dosyasında toplam 163 test geçiyor; Server Action sınırları, arama girdi/body sınırları, kalıcı rate limit, TMDB retry/backoff, kontrollü hata arayüzü, migration atomikliği, accordion, bölüm toggle ve favori/puan akışları dahil.
+- 20 test dosyasında toplam 188 test geçiyor; Server Action sınırları, arama girdi/body sınırları, kalıcı rate limit, TMDB retry/backoff, kontrollü hata arayüzü, migration atomikliği, accordion, bölüm toggle ve favori/puan akışları dahil.
 - Üretim derlemesi geçiyor ve harici font indirmesine ihtiyaç duymuyor.
 - Kullanılmayan TanStack Query bağımlılığı kaldırıldı; mevcut veri akışı Server Components ve Server Actions kullanıyor.
 - Önceki bağımlılık doğrulamasında `npm audit` sonucu 0 güvenlik açığıydı; accordion çalışmasında audit yeniden çalıştırılmadı.
@@ -143,10 +143,28 @@ Son doğrulama: **17 Eylül 2026**
 
 ## Lisans
 
-MIT
+[MIT](./LICENSE)
 
 ## Kütüphane kategori testleri (17 Eylül 2026)
 
 Gerçek sekme ve durum seçici bileşenleriyle üç dizi üzerinden kategori ayrımı, sayaçlar, boş durum ve durum değişikliği sonrası yeni sunucu verisiyle taşınma doğrulandı. Favori/puan ve bölüm ilerlemesi beklentileri korundu. Kategori filtresi geçici kaldırıldığında iki test başarısız oldu; üretim dosyası eksiksiz geri yüklendi. Bu HappyDOM etkileşim testi, gerçek tarayıcı veya canlı Supabase E2E testi değildir.
 
 Lint, typecheck, 18 dosyada 163 test ve production build başarılı.
+
+## Aynı dizinin güncel kişisel verileri (17 Eylül 2026)
+
+P2.8: Aynı dizi kimliğine yeni favori/puan verisi geldiğinde görünümün yenilendiği ve eski hata mesajının temizlendiği etkileşim testi eklendi. Farklı diziye geçiş testi ayrıca korundu. React anahtarını yalnız dizi kimliğine indiren geçici değişiklik yeni testi kırdı; üretim dosyası geri yüklendi. Supabase action'ları taklit edilir; canlı E2E değildir.
+
+Lint, typecheck, 20 dosyada 186 test ve production build başarılı.
+
+## TMDB istemci sözleşmesi (17 Eylül 2026)
+
+P2.7 tamamlandı: doğru Bearer başlığı ve özel/Unicode karakterli aramanın sayfa parametresiyle kodlanması test edildi. Token yokken istek yapılmaması, HTTP hata/retry ve URL ayracı testleri korundu. Geçersiz Authorization ile yeni test başarısız oldu; üretim kodu geri yüklendi. Fetch taklit edilir; canlı TMDB isteği yapılmaz.
+
+Lint, typecheck, 20 dosyada 188 test ve production build başarılı.
+
+## Katkı ve güvenlik
+
+- [Katkı rehberi](./CONTRIBUTING.md): kurulum, değişiklik kapsamı ve kalite kontrolleri.
+- [Güvenlik bildirimi](./SECURITY.md): hassas ayrıntıları paylaşmadan özel bildirim kanalı bulma.
+- [Kod sahipliği](./.github/CODEOWNERS): varsayılan inceleme sahibi. Zorunlu onay ve dal koruması ayrıca yapılandırılmalıdır; P1.4 kapsamında açıktır.

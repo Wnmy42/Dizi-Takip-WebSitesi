@@ -132,6 +132,31 @@ describe('PersonalShowControls', () => {
     expect((screen.getByLabelText('Kişisel puanım') as HTMLSelectElement).value).toBe('');
   });
 
+  it('applies refreshed server values for the same show and clears stale feedback', async () => {
+    setShowFavorite.mockResolvedValue({ error: 'Eski sunucu hatası' });
+    const view = render(
+      <PersonalShowControls
+        userShowId={FIRST_SHOW_ID}
+        initialIsFavorite={false}
+        initialRating={3}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Favorilere ekle' }));
+    expect((await screen.findByRole('alert')).textContent).toContain('Eski sunucu hatası');
+
+    view.rerender(
+      <PersonalShowControls
+        userShowId={FIRST_SHOW_ID}
+        initialIsFavorite
+        initialRating={9}
+      />,
+    );
+
+    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
+    expect(screen.getByRole('button', { name: 'Favorilerden çıkar' }).getAttribute('aria-pressed')).toBe('true');
+    expect((screen.getByLabelText('Kişisel puanım') as HTMLSelectElement).value).toBe('9');
+  });
+
   it('resets local feedback and values when a fresh server snapshot arrives', async () => {
     setShowFavorite.mockResolvedValue({ error: 'Eski dizi hatası' });
     const view = render(
