@@ -103,10 +103,10 @@ lib/
 
 ## Güncel Durum
 
-Son doğrulama: **16 Eylül 2026**
+Son doğrulama: **17 Eylül 2026**
 
 - Lint ve TypeScript kontrolü geçiyor.
-- 18 test dosyasında toplam 161 test geçiyor; Server Action sınırları, arama girdi/body sınırları, kalıcı rate limit, TMDB retry/backoff, kontrollü hata arayüzü, migration atomikliği, accordion, bölüm toggle ve favori/puan akışları dahil.
+- 18 test dosyasında toplam 163 test geçiyor; Server Action sınırları, arama girdi/body sınırları, kalıcı rate limit, TMDB retry/backoff, kontrollü hata arayüzü, migration atomikliği, accordion, bölüm toggle ve favori/puan akışları dahil.
 - Üretim derlemesi geçiyor ve harici font indirmesine ihtiyaç duymuyor.
 - Kullanılmayan TanStack Query bağımlılığı kaldırıldı; mevcut veri akışı Server Components ve Server Actions kullanıyor.
 - Önceki bağımlılık doğrulamasında `npm audit` sonucu 0 güvenlik açığıydı; accordion çalışmasında audit yeniden çalıştırılmadı.
@@ -144,3 +144,9 @@ Son doğrulama: **16 Eylül 2026**
 ## Lisans
 
 MIT
+
+## Kütüphane kategori testleri (17 Eylül 2026)
+
+Gerçek sekme ve durum seçici bileşenleriyle üç dizi üzerinden kategori ayrımı, sayaçlar, boş durum ve durum değişikliği sonrası yeni sunucu verisiyle taşınma doğrulandı. Favori/puan ve bölüm ilerlemesi beklentileri korundu. Kategori filtresi geçici kaldırıldığında iki test başarısız oldu; üretim dosyası eksiksiz geri yüklendi. Bu HappyDOM etkileşim testi, gerçek tarayıcı veya canlı Supabase E2E testi değildir.
+
+Lint, typecheck, 18 dosyada 163 test ve production build başarılı.
