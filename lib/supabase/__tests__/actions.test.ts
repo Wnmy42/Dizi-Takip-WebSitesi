@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { revalidatePath, createClient } = vi.hoisted(() => ({
+const { revalidatePath, createClient, redirect } = vi.hoisted(() => ({
   revalidatePath: vi.fn(),
   createClient: vi.fn(),
+  redirect: vi.fn(),
 }));
 
 vi.mock('next/cache', () => ({ revalidatePath }));
-vi.mock('next/navigation', () => ({ redirect: vi.fn() }));
+vi.mock('next/navigation', () => ({ redirect }));
 vi.mock('@/lib/supabase/server', () => ({ createClient }));
 
 import {
@@ -14,6 +15,9 @@ import {
   removeShow,
   setShowFavorite,
   setShowRating,
+  signIn,
+  signOut,
+  signUp,
   toggleEpisode,
   updateShowStatus,
 } from '@/lib/supabase/actions';
@@ -533,5 +537,136 @@ describe('show mutation identifiers and status', () => {
     expect(result).toEqual({ success: true });
     expect(query.delete).toHaveBeenCalledOnce();
     expect(revalidatePath).toHaveBeenCalledExactlyOnceWith('/library');
+  });
+});
+
+function formData(fields: Record<string, string>): FormData {
+  const fd = new FormData();
+  for (const [key, value] of Object.entries(fields)) {
+    fd.append(key, value);
+  }
+  return fd;
+}
+
+function mockAuthClient(overrides: {
+  signInWithPassword?: ReturnType<typeof vi.fn>;
+  signUp?: ReturnType<typeof vi.fn>;
+  signOut?: ReturnType<typeof vi.fn>;
+} = {}) {
+  const client = {
+    auth: {
+      signInWithPassword: overrides.signInWithPassword ?? vi.fn().mockResolvedValue({ error: null }),
+      signUp: overrides.signUp ?? vi.fn().mockResolvedValue({ error: null }),
+      signOut: overrides.signOut ?? vi.fn().mockResolvedValue({ error: null }),
+    },
+  };
+  createClient.mockResolvedValue(client);
+  return client;
+}
+
+describe('signIn', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('passes email and password to Supabase and redirects to /library on success', async () => {
+    const signInFn = vi.fn().mockResolvedValue({ error: null });
+    mockAuthClient({ signInWithPassword: signInFn });
+
+    await signIn(undefined, formData({ email: 'test@example.com', password: 'secret123' }));
+
+    expect(signInFn).toHaveBeenCalledExactlyOnceWith({
+      email: 'test@example.com',
+      password: 'secret123',
+    });
+    expect(redirect).toHaveBeenCalledExactlyOnceWith('/library');
+  });
+
+  it('returns the auth error message and does not redirect on failure', async () => {
+    const signInFn = vi.fn().mockResolvedValue({
+      error: { message: 'Invalid login credentials' },
+    });
+    mockAuthClient({ signInWithPassword: signInFn });
+
+    const result = await signIn(undefined, formData({ email: 'wrong@example.com', password: 'bad' }));
+
+    expect(result).toEqual({ error: 'Invalid login credentials' });
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it('accepts FormData as prevState for direct form action binding', async () => {
+    const signInFn = vi.fn().mockResolvedValue({ error: null });
+    mockAuthClient({ signInWithPassword: signInFn });
+
+    const fd = formData({ email: 'direct@example.com', password: 'pass123' });
+    await signIn(fd);
+
+    expect(signInFn).toHaveBeenCalledExactlyOnceWith({
+      email: 'direct@example.com',
+      password: 'pass123',
+    });
+    expect(redirect).toHaveBeenCalledExactlyOnceWith('/library');
+  });
+});
+
+describe('signUp', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('calls Supabase signUp and returns a success message without redirecting', async () => {
+    const signUpFn = vi.fn().mockResolvedValue({ error: null });
+    mockAuthClient({ signUp: signUpFn });
+
+    const result = await signUp(undefined, formData({ email: 'new@example.com', password: 'strong456' }));
+
+    expect(signUpFn).toHaveBeenCalledExactlyOnceWith({
+      email: 'new@example.com',
+      password: 'strong456',
+    });
+    expect(result).toEqual({ success: 'Hesabın oluşturuldu. E-posta adresinizi doğrulayın.' });
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it('returns the auth error message on failure', async () => {
+    const signUpFn = vi.fn().mockResolvedValue({
+      error: { message: 'User already registered' },
+    });
+    mockAuthClient({ signUp: signUpFn });
+
+    const result = await signUp(undefined, formData({ email: 'existing@example.com', password: 'pass123' }));
+
+    expect(result).toEqual({ error: 'User already registered' });
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it('accepts FormData as prevState for direct form action binding', async () => {
+    const signUpFn = vi.fn().mockResolvedValue({ error: null });
+    mockAuthClient({ signUp: signUpFn });
+
+    const fd = formData({ email: 'direct@example.com', password: 'pass789' });
+    const result = await signUp(fd);
+
+    expect(signUpFn).toHaveBeenCalledExactlyOnceWith({
+      email: 'direct@example.com',
+      password: 'pass789',
+    });
+    expect(result).toEqual({ success: 'Hesabın oluşturuldu. E-posta adresinizi doğrulayın.' });
+  });
+});
+
+describe('signOut', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('calls Supabase signOut and redirects to /discover', async () => {
+    const signOutFn = vi.fn().mockResolvedValue({ error: null });
+    mockAuthClient({ signOut: signOutFn });
+
+    await signOut();
+
+    expect(signOutFn).toHaveBeenCalledOnce();
+    expect(redirect).toHaveBeenCalledExactlyOnceWith('/discover');
   });
 });

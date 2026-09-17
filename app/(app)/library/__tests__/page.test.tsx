@@ -4,10 +4,11 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ShowStatus } from '@/lib/supabase/types';
 
-const { createClient, personalControls, updateShowStatus } = vi.hoisted(() => ({
+const { createClient, personalControls, updateShowStatus, redirect } = vi.hoisted(() => ({
   createClient: vi.fn(),
   personalControls: vi.fn<(props: unknown) => null>(() => null),
   updateShowStatus: vi.fn(),
+  redirect: vi.fn(),
 }));
 
 vi.mock('@/lib/supabase/server', () => ({ createClient }));
@@ -18,7 +19,7 @@ vi.mock('@/components/progress-bar', () => ({ ProgressBar: () => null }));
 // Test double: image optimization is outside this interaction test.
 // eslint-disable-next-line @next/next/no-img-element
 vi.mock('next/image', () => ({ default: ({ alt }: { alt: string }) => <img src="/poster.png" alt={alt} /> }));
-vi.mock('next/navigation', () => ({ redirect: vi.fn() }));
+vi.mock('next/navigation', () => ({ redirect }));
 
 import LibraryPage from '@/app/(app)/library/page';
 
@@ -129,5 +130,23 @@ describe('library categories', () => {
       userShowId: ids.watching, initialIsFavorite: true, initialRating: 9,
     }, undefined);
     expect(within(activePanel()).getByText('4/10 bölüm')).toBeDefined();
+  });
+});
+
+describe('unauthenticated library access', () => {
+  it('redirects to /login when there is no active session', async () => {
+    const from = vi.fn();
+    const redirectError = new Error('NEXT_REDIRECT');
+    redirect.mockImplementation(() => { throw redirectError; });
+    createClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: null } }),
+      },
+      from,
+    });
+
+    await expect(LibraryPage()).rejects.toThrow('NEXT_REDIRECT');
+    expect(redirect).toHaveBeenCalledExactlyOnceWith('/login');
+    expect(from).not.toHaveBeenCalled();
   });
 });
