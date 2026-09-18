@@ -108,4 +108,14 @@ describe('SeasonDetailsLoader', () => {
     await expect(loader.load(1399, 1)).rejects.toThrow('Sezon bölümleri yüklenemedi.');
     await expect(loader.load(1399, 1)).rejects.toThrow('Sezon bölümleri yüklenemedi.');
   });
+
+  it('accepts a season with overview: null (TMDB non-English locale regression)', async () => {
+    const detail = { ...seasonDetail(1399, 1), overview: null };
+    const fetchSeason = vi.fn().mockResolvedValue(jsonResponse(detail));
+    const loader = new SeasonDetailsLoader(fetchSeason);
+
+    const result = await loader.load(1399, 1);
+    expect(result.overview).toBeNull();
+    expect(result.episodes).toHaveLength(1);
+  });
 });

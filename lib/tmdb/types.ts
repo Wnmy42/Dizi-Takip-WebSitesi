@@ -2,7 +2,7 @@
 export interface TMDBShow {
   id: number;
   name: string;
-  overview: string;
+  overview: string | null;
   poster_path: string | null;
   backdrop_path: string | null;
   vote_average: number;
@@ -29,14 +29,14 @@ export interface TMDBSeason {
   episode_count: number;
   air_date: string | null;
   poster_path: string | null;
-  overview: string;
+  overview: string | null;
 }
 
 export interface TMDBEpisode {
   id: number;
   episode_number: number;
   name: string;
-  overview: string;
+  overview: string | null;
   air_date: string | null;
   still_path: string | null;
   runtime: number | null;
@@ -47,7 +47,7 @@ export interface TMDBSeasonDetail {
   id: number;
   season_number: number;
   name: string;
-  overview: string;
+  overview: string | null;
   episodes: TMDBEpisode[];
 }
 

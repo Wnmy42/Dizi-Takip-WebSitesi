@@ -17,7 +17,7 @@ function isSeasonDetail(value: unknown): value is TMDBSeasonDetail {
     typeof season.id === 'number'
     && typeof season.season_number === 'number'
     && typeof season.name === 'string'
-    && typeof season.overview === 'string'
+    && (typeof season.overview === 'string' || season.overview === null || season.overview === undefined)
     && Array.isArray(season.episodes)
   );
 }

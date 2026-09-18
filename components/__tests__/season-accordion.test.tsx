@@ -197,4 +197,18 @@ describe('SeasonAccordion', () => {
     fireEvent.click(trigger);
     await waitFor(() => expect(fetchSeason).toHaveBeenCalledOnce());
   });
+
+  it('loads episodes for a season with overview: null (TMDB non-English locale regression)', async () => {
+    const nullOverviewSeason: TMDBSeason = {
+      ...firstSummary,
+      overview: null,
+    };
+    const detail = { ...seasonDetail(), overview: null };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(detail)));
+    renderAccordion({ seasons: [nullOverviewSeason] });
+
+    fireEvent.click(screen.getByRole('button', { name: /Birinci Sezon/ }));
+    expect(await screen.findByText('Pilot Bölüm')).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
 });
