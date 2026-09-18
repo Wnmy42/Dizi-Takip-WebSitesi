@@ -101,12 +101,14 @@ lib/
 - [ ] İstatistik sayfası
 - [ ] Vercel deploy
 
+- [x] Arama sonuçlarında ileri–geri sayfalama (Önceki/Sonraki)
+
 ## Güncel Durum
 
-Son doğrulama: **17 Eylül 2026**
+Son doğrulama: **18 Eylül 2026**
 
 - Lint ve TypeScript kontrolü geçiyor.
-- 20 test dosyasında toplam 188 test geçiyor; Server Action sınırları, arama girdi/body sınırları, kalıcı rate limit, TMDB retry/backoff, kontrollü hata arayüzü, migration atomikliği, accordion, bölüm toggle ve favori/puan akışları dahil.
+- 20 test dosyasında toplam 198 test geçiyor; Server Action sınırları, arama girdi/body sınırları, kalıcı rate limit, TMDB retry/backoff, kontrollü hata arayüzü, migration atomikliği, accordion, bölüm toggle, favori/puan akışları ve arama sayfalama kontrolleri dahil.
 - Üretim derlemesi geçiyor ve harici font indirmesine ihtiyaç duymuyor.
 - Kullanılmayan TanStack Query bağımlılığı kaldırıldı; mevcut veri akışı Server Components ve Server Actions kullanıyor.
 - Önceki bağımlılık doğrulamasında `npm audit` sonucu 0 güvenlik açığıydı; accordion çalışmasında audit yeniden çalıştırılmadı.

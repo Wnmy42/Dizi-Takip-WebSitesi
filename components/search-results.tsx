@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { ShowCard } from '@/components/show-card';
 import type { TMDBPaginatedResponse, TMDBShow } from '@/lib/tmdb/types';
 
@@ -11,6 +13,13 @@ type SearchState =
   | { status: 'error'; message: string; retryAfterSeconds: number | null };
 
 const FALLBACK_ERROR = 'Arama şu anda kullanılamıyor. Lütfen biraz sonra tekrar deneyin.';
+
+function paginationHref(query: string, page: number): string {
+  const params = new URLSearchParams();
+  params.set('q', query);
+  if (page > 1) params.set('page', String(page));
+  return `/discover?${params.toString()}`;
+}
 
 export function SearchResults({ query, page }: { query: string; page: number }) {
   const [attempt, setAttempt] = useState(0);
@@ -108,14 +117,53 @@ export function SearchResults({ query, page }: { query: string; page: number }) 
     );
   }
 
+  const hasPrev = state.data.page > 1;
+  const hasNext = state.data.page < state.data.total_pages;
+
   return (
     <>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
         {state.data.results.map((show) => <ShowCard key={show.id} show={show} />)}
       </div>
-      <p className="text-center text-sm text-muted-foreground mt-4">
-        {state.data.total_results.toLocaleString('tr-TR')} sonuç · Sayfa {state.data.page} / {state.data.total_pages}
-      </p>
+      {state.data.total_pages > 1 ? (
+        <nav aria-label="Arama sonuçları sayfalama" className="flex items-center justify-center gap-3 mt-6">
+          {hasPrev ? (
+            <Link
+              href={paginationHref(query, state.data.page - 1)}
+              className={buttonVariants({ variant: 'outline', size: 'sm' })}
+            >
+              <ChevronLeft className="size-4" />
+              Önceki
+            </Link>
+          ) : (
+            <Button variant="outline" size="sm" disabled>
+              <ChevronLeft className="size-4" />
+              Önceki
+            </Button>
+          )}
+          <span className="text-sm text-muted-foreground">
+            {state.data.total_results.toLocaleString('tr-TR')} sonuç · Sayfa {state.data.page} / {state.data.total_pages}
+          </span>
+          {hasNext ? (
+            <Link
+              href={paginationHref(query, state.data.page + 1)}
+              className={buttonVariants({ variant: 'outline', size: 'sm' })}
+            >
+              Sonraki
+              <ChevronRight className="size-4" />
+            </Link>
+          ) : (
+            <Button variant="outline" size="sm" disabled>
+              Sonraki
+              <ChevronRight className="size-4" />
+            </Button>
+          )}
+        </nav>
+      ) : (
+        <p className="text-center text-sm text-muted-foreground mt-4">
+          {state.data.total_results.toLocaleString('tr-TR')} sonuç
+        </p>
+      )}
     </>
   );
 }
